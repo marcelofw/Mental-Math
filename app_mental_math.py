@@ -1,56 +1,60 @@
 import streamlit as st
 import random
 
-# Configuração da página para parecer um app de celular
+# Configuração da página
 st.set_page_config(page_title="Cálculo Mental", page_icon="🔢")
 
-st.title("🔢 Mestre da Multiplicação")
-st.write("Treine sua mente com números de 2 dígitos.")
-
-# --- LÓGICA DE ESTADO (Para o app não 'resetar' a conta toda hora) ---
+# --- LÓGICA DE ESTADO ---
 if 'n1' not in st.session_state:
     st.session_state.n1 = random.randint(10, 99)
     st.session_state.n2 = random.randint(10, 99)
-    st.session_state.acertos = 0
+    st.session_state.feedback = ""
 
-def nova_pergunta():
-    st.session_state.n1 = random.randint(10, 99)
-    st.session_state.n2 = random.randint(10, 99)
-    st.session_state.resposta_usuario = "" # Limpa o campo de texto
+def gerar_nova_conta(modo):
+    if modo == "1 x 2 dígitos":
+        st.session_state.n1 = random.randint(2, 9)
+        st.session_state.n2 = random.randint(10, 99)
+    else: # 2 x 2 dígitos
+        st.session_state.n1 = random.randint(10, 99)
+        st.session_state.n2 = random.randint(10, 99)
+    st.session_state.feedback = ""
+    # Limpar o campo de resposta via session_state
+    if "campo_resposta" in st.session_state:
+        st.session_state.campo_resposta = ""
 
 # --- INTERFACE ---
-n1 = st.session_state.n1
-n2 = st.session_state.n2
-resultado_real = n1 * n2
+# Menu para escolher o tipo de conta
+modo_treino = st.radio(
+    "Escolha o nível de dificuldade:",
+    ("2 x 2 dígitos", "1 x 2 dígitos"),
+    horizontal=True
+)
 
-st.subheader(f"Quanto é {n1} × {n2}?")
+# Mostra a conta com destaque
+st.subheader(f"Quanto é {st.session_state.n1} × {st.session_state.n2}?")
 
-# Campo de entrada (o parâmetro 'key' ajuda o Streamlit a manter o valor)
-resposta = st.text_input("Sua resposta:", key="resposta_usuario")
+# Campo de entrada
+resposta = st.text_input("Resultado:", key="campo_resposta")
 
-col1, col2 = st.columns(2)
+# Botão de verificar
+if st.button("Verificar"):
+    if resposta:
+        try:
+            resultado_real = st.session_state.n1 * st.session_state.n2
+            if int(resposta) == resultado_real:
+                st.session_state.feedback = f"✅ Correto! {st.session_state.n1} × {st.session_state.n2} = {resultado_real}"
+            else:
+                st.session_state.feedback = f"❌ Errado. Era {resultado_real}"
+        except ValueError:
+            st.session_state.feedback = "⚠️ Digite um número válido."
+    else:
+        st.session_state.feedback = "🤔 Digite uma resposta."
 
-with col1:
-    if st.button("Verificar"):
-        if resposta:
-            try:
-                if int(resposta) == resultado_real:
-                    st.success(f"Correto! {n1} × {n2} = {resultado_real}")
-                    st.session_state.acertos += 1
-                else:
-                    st.error(f"Incorreto. O resultado era {resultado_real}")
-            except ValueError:
-                st.warning("Por favor, digite um número.")
-        else:
-            st.info("Digite algo antes de verificar.")
+# Exibe o feedback (se houver)
+if st.session_state.feedback:
+    st.write(st.session_state.feedback)
 
-with col2:
-    if st.button("Próxima Conta ➡️"):
-        nova_pergunta()
-        st.rerun()
-
-st.divider()
-st.sidebar.metric("Sessão Atual", f"{st.session_state.acertos} acertos")
-if st.sidebar.button("Zerar Placar"):
-    st.session_state.acertos = 0
+# Botão para próxima conta
+if st.button("Próxima Conta ➡️"):
+    gerar_nova_conta(modo_treino)
     st.rerun()
