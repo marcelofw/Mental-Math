@@ -4,30 +4,38 @@ import random
 # 1. Configuração da página
 st.set_page_config(page_title="Treino Mental", page_icon="🔢")
 
-# 2. Inicialização do Estado (Garante que o app não quebre ao abrir)
-if 'n1' not in st.session_state:
-    st.session_state.n1 = random.randint(10, 99)
-    st.session_state.n2 = random.randint(10, 99)
-    st.session_state.feedback = ""
-    st.session_state.contador = 0  # Usado para resetar o campo de texto
+# --- INICIALIZAÇÃO ROBUSTA DO ESTADO ---
+# Usamos um loop para garantir que tudo exista antes de carregar a interface
+for key, value in {
+    'n1': random.randint(10, 99),
+    'n2': random.randint(10, 99),
+    'feedback': "",
+    'contador': 0,
+    'modo': "2 x 2 dígitos"
+}.items():
+    if key not in st.session_state:
+        st.session_state[key] = value
 
+# --- FUNÇÕES ---
 def gerar_conta():
-    if st.session_state.modo == "1 x 2 dígitos":
+    # O modo é pego diretamente do st.session_state.modo_selector
+    if st.session_state.modo_selector == "1 x 2 dígitos":
         st.session_state.n1 = random.randint(2, 9)
     else:
         st.session_state.n1 = random.randint(10, 99)
+    
     st.session_state.n2 = random.randint(10, 99)
     st.session_state.feedback = ""
-    st.session_state.contador += 1  # Muda a key do input, limpando-o
+    st.session_state.contador += 1
 
-# 3. Interface
+# --- INTERFACE ---
 st.title("🔢 Desafio de Multiplicação")
 
-# Seletor de Modo
+# Radio para trocar o modo
 st.radio(
     "Escolha o nível:",
     ["2 x 2 dígitos", "1 x 2 dígitos"],
-    key="modo",
+    key="modo_selector",  # Chave interna para o widget
     on_change=gerar_conta,
     horizontal=True
 )
@@ -37,15 +45,14 @@ st.divider()
 # Pergunta
 st.header(f"Quanto é {st.session_state.n1} × {st.session_state.n2}?")
 
-# Campo de Resposta (A key muda toda vez que geramos uma conta nova)
-# No Android, 'type="default"' com 'label_visibility' ajuda na limpeza visual
+# Campo de Resposta (A key muda via contador para limpar o campo)
 resposta = st.text_input(
     "Sua resposta:", 
     key=f"input_{st.session_state.contador}",
-    placeholder="Digite o resultado aqui..."
+    placeholder="Digite o resultado..."
 )
 
-# 4. Botões de Ação
+# Botões
 col1, col2 = st.columns(2)
 
 with col1:
@@ -54,20 +61,20 @@ with col1:
             try:
                 real = st.session_state.n1 * st.session_state.n2
                 if int(resposta) == real:
-                    st.session_state.feedback = f"✅ Correto! {real}"
+                    st.session_state.feedback = f"✅ Correto! {st.session_state.n1} × {st.session_state.n2} = {real}"
                 else:
                     st.session_state.feedback = f"❌ Errado! Era {real}"
             except ValueError:
                 st.session_state.feedback = "⚠️ Digite apenas números!"
         else:
-            st.session_state.feedback = "🤔 Escreva algo antes."
+            st.session_state.feedback = "🤔 Digite algo primeiro."
 
 with col2:
     if st.button("Próxima Conta ➡️", use_container_width=True):
         gerar_conta()
         st.rerun()
 
-# 5. Feedback
+# Feedback
 if st.session_state.feedback:
     if "✅" in st.session_state.feedback:
         st.success(st.session_state.feedback)
