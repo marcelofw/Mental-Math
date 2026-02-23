@@ -1,99 +1,75 @@
 import streamlit as st
 import random
 
-st.set_page_config(page_title="Cálculo Mental", page_icon="🔢")
+# 1. Configuração da página
+st.set_page_config(page_title="Treino Mental", page_icon="🔢")
 
-# --- 1. INICIALIZAÇÃO SEGURA DO ESTADO ---
-# Garantimos que TODAS as variáveis existam antes de qualquer lógica
-if 'modo_escolhido' not in st.session_state:
-    st.session_state.modo_escolhido = "2 x 2 dígitos"
-
+# 2. Inicialização do Estado (Garante que o app não quebre ao abrir)
 if 'n1' not in st.session_state:
     st.session_state.n1 = random.randint(10, 99)
     st.session_state.n2 = random.randint(10, 99)
-
-if 'resposta_atual' not in st.session_state:
-    st.session_state.resposta_atual = ""
-
-if 'feedback' not in st.session_state:
     st.session_state.feedback = ""
+    st.session_state.contador = 0  # Usado para resetar o campo de texto
 
-# --- 2. FUNÇÕES DE LÓGICA ---
-def sortear_numeros():
-    if st.session_state.modo_escolhido == "1 x 2 dígitos":
+def gerar_conta():
+    if st.session_state.modo == "1 x 2 dígitos":
         st.session_state.n1 = random.randint(2, 9)
-        st.session_state.n2 = random.randint(10, 99)
     else:
         st.session_state.n1 = random.randint(10, 99)
-        st.session_state.n2 = random.randint(10, 99)
+    st.session_state.n2 = random.randint(10, 99)
     st.session_state.feedback = ""
-    st.session_state.resposta_atual = ""
+    st.session_state.contador += 1  # Muda a key do input, limpando-o
 
-def digitar(numero):
-    st.session_state.resposta_atual += str(numero)
+# 3. Interface
+st.title("🔢 Desafio de Multiplicação")
 
-def limpar_digito():
-    st.session_state.resposta_atual = st.session_state.resposta_atual[:-1]
-
-# --- 3. INTERFACE ---
-# Radio button para trocar o modo
+# Seletor de Modo
 st.radio(
-    "Dificuldade:",
+    "Escolha o nível:",
     ["2 x 2 dígitos", "1 x 2 dígitos"],
-    key="modo_escolhido",
-    on_change=sortear_numeros,
+    key="modo",
+    on_change=gerar_conta,
     horizontal=True
 )
 
-st.markdown(f"### Quanto é {st.session_state.n1} × {st.session_state.n2}?")
-
-# Display da resposta que vai sendo montada
-# Usamos o método .get() para evitar o erro de atributo se algo falhar
-resp_visual = st.session_state.get('resposta_atual', '')
-st.markdown(f"## :blue[{resp_visual if resp_visual else '?'}]")
-
-# --- 4. TECLADO NUMÉRICO ---
-with st.container():
-    # Teclas 1 a 9
-    for i in range(0, 9, 3):
-        cols = st.columns(3)
-        for j in range(3):
-            num = i + j + 1
-            if cols[j].button(str(num), use_container_width=True, key=f"btn_{num}"):
-                digitar(num)
-                st.rerun()
-
-    # Teclas 0, Backspace e Limpar Tudo
-    c1, c2, c3 = st.columns(3)
-    if c1.button("0", use_container_width=True):
-        digitar(0)
-        st.rerun()
-    if c2.button("⌫", use_container_width=True):
-        limpar_digito()
-        st.rerun()
-    if c3.button("Limpar", use_container_width=True):
-        st.session_state.resposta_atual = ""
-        st.rerun()
-
 st.divider()
 
-# --- 5. VERIFICAÇÃO ---
-if st.button("VERIFICAR ✅", use_container_width=True, type="primary"):
-    if st.session_state.resposta_atual:
-        res_real = st.session_state.n1 * st.session_state.n2
-        if int(st.session_state.resposta_atual) == res_real:
-            st.session_state.feedback = f"✅ Correto! {st.session_state.n1} x {st.session_state.n2} = {res_real}"
+# Pergunta
+st.header(f"Quanto é {st.session_state.n1} × {st.session_state.n2}?")
+
+# Campo de Resposta (A key muda toda vez que geramos uma conta nova)
+# No Android, 'type="default"' com 'label_visibility' ajuda na limpeza visual
+resposta = st.text_input(
+    "Sua resposta:", 
+    key=f"input_{st.session_state.contador}",
+    placeholder="Digite o resultado aqui..."
+)
+
+# 4. Botões de Ação
+col1, col2 = st.columns(2)
+
+with col1:
+    if st.button("Verificar ✅", use_container_width=True, type="primary"):
+        if resposta:
+            try:
+                real = st.session_state.n1 * st.session_state.n2
+                if int(resposta) == real:
+                    st.session_state.feedback = f"✅ Correto! {real}"
+                else:
+                    st.session_state.feedback = f"❌ Errado! Era {real}"
+            except ValueError:
+                st.session_state.feedback = "⚠️ Digite apenas números!"
         else:
-            st.session_state.feedback = f"❌ Errado! O resultado era {res_real}"
-    else:
-        st.session_state.feedback = "🤔 Digite algo primeiro."
+            st.session_state.feedback = "🤔 Escreva algo antes."
 
-if st.button("PRÓXIMA CONTA ➡️", on_click=sortear_numeros, use_container_width=True):
-    pass
+with col2:
+    if st.button("Próxima Conta ➡️", use_container_width=True):
+        gerar_conta()
+        st.rerun()
 
+# 5. Feedback
 if st.session_state.feedback:
-    # Mostra o feedback com um estilo de alerta (verde para sucesso, azul para info)
     if "✅" in st.session_state.feedback:
         st.success(st.session_state.feedback)
     else:
-        st.info(st.session_state.feedback)
+        st.error(st.session_state.feedback)
