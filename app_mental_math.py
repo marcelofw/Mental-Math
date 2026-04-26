@@ -6,6 +6,8 @@ st.set_page_config(page_title="Treino Mental", page_icon="🔢")
 
 # --- INICIALIZAÇÃO ROBUSTA DO ESTADO ---
 # Usamos um loop para garantir que tudo exista antes de carregar a interface
+opcoes_modo = ["1 x 2 dígitos", "2 x 2 dígitos", "1 x 3 dígitos", "2 x 3 dígitos"]
+
 for key, value in {
     'n1': random.randint(10, 99),
     'n2': random.randint(10, 99),
@@ -18,13 +20,21 @@ for key, value in {
 
 # --- FUNÇÕES ---
 def gerar_conta():
-    # O modo é pego diretamente do st.session_state.modo_selector
-    if st.session_state.modo_selector == "1 x 2 dígitos":
-        st.session_state.n1 = random.randint(2, 9)
-    else:
-        st.session_state.n1 = random.randint(10, 99)
+    modo = st.session_state.modo_selector
     
-    st.session_state.n2 = random.randint(10, 99)
+    if modo == "1 x 2 dígitos":
+        st.session_state.n1 = random.randint(2, 9)
+        st.session_state.n2 = random.randint(10, 99)
+    elif modo == "2 x 2 dígitos":
+        st.session_state.n1 = random.randint(10, 99)
+        st.session_state.n2 = random.randint(10, 99)
+    elif modo == "1 x 3 dígitos":
+        st.session_state.n1 = random.randint(2, 9)
+        st.session_state.n2 = random.randint(100, 999)
+    elif modo == "2 x 3 dígitos":
+        st.session_state.n1 = random.randint(10, 99)
+        st.session_state.n2 = random.randint(100, 999)
+    
     st.session_state.feedback = ""
     st.session_state.contador += 1
 
@@ -34,7 +44,7 @@ st.title("🔢 Desafio de Multiplicação")
 # Radio para trocar o modo
 st.radio(
     "Escolha o nível:",
-    ["2 x 2 dígitos", "1 x 2 dígitos"],
+    opcoes_modo,
     key="modo_selector",  # Chave interna para o widget
     on_change=gerar_conta,
     horizontal=True
