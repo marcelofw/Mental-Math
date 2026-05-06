@@ -2,84 +2,105 @@ import streamlit as st
 import random
 
 # 1. Configuração da página
-st.set_page_config(page_title="Treino Mental", page_icon="🔢")
+st.set_page_config(page_title="Treino Mental Multi-Operações", page_icon="🧮")
 
-# --- INICIALIZAÇÃO ROBUSTA DO ESTADO ---
-# Usamos um loop para garantir que tudo exista antes de carregar a interface
-opcoes_modo = ["1 x 2 dígitos", "2 x 2 dígitos", "1 x 3 dígitos", "2 x 3 dígitos"]
+# --- INICIALIZAÇÃO DO ESTADO ---
+opcoes_modo = ["Fácil (1 dígito)", "Médio (2 dígitos)", "Difícil (3 dígitos)"]
+opcoes_operacao = ["Multiplicação", "Adição", "Subtração"]
 
-for key, value in {
-    'n1': random.randint(10, 99),
-    'n2': random.randint(10, 99),
-    'feedback': "",
-    'contador': 0,
-    'modo': "2 x 2 dígitos"
-}.items():
-    if key not in st.session_state:
-        st.session_state[key] = value
+if 'n1' not in st.session_state:
+    st.session_state.update({
+        'n1': 0,
+        'n2': 0,
+        'feedback': "",
+        'contador': 0,
+        'operacao_atual': "Multiplicação"
+    })
 
 # --- FUNÇÕES ---
 def gerar_conta():
     modo = st.session_state.modo_selector
+    op = st.session_state.op_selector
     
-    if modo == "1 x 2 dígitos":
-        st.session_state.n1 = random.randint(2, 9)
-        st.session_state.n2 = random.randint(10, 99)
-    elif modo == "2 x 2 dígitos":
-        st.session_state.n1 = random.randint(10, 99)
-        st.session_state.n2 = random.randint(10, 99)
-    elif modo == "1 x 3 dígitos":
-        st.session_state.n1 = random.randint(2, 9)
-        st.session_state.n2 = random.randint(100, 999)
-    elif modo == "2 x 3 dígitos":
-        st.session_state.n1 = random.randint(10, 99)
-        st.session_state.n2 = random.randint(100, 999)
+    # Define os intervalos baseado no nível
+    if "1 dígito" in modo:
+        range_min, range_max = 2, 9
+    elif "2 dígitos" in modo:
+        range_min, range_max = 10, 99
+    else:
+        range_min, range_max = 100, 999
+
+    st.session_state.n1 = random.randint(range_min, range_max)
+    st.session_state.n2 = random.randint(range_min, range_max)
     
+    # Garantir que subtração não resulte em números negativos (opcional, para facilitar)
+    if op == "Subtração" and st.session_state.n1 < st.session_state.n2:
+        st.session_state.n1, st.session_state.n2 = st.session_state.n2, st.session_state.n1
+        
+    st.session_state.operacao_atual = op
     st.session_state.feedback = ""
     st.session_state.contador += 1
 
-# --- INTERFACE ---
-st.title("🔢 Desafio de Multiplicação")
+# Inicializa a primeira conta se os números forem 0
+if st.session_state.n1 == 0:
+    # Definimos valores padrão para evitar erro no primeiro carregamento
+    st.session_state.n1, st.session_state.n2 = 10, 10
 
-# Radio para trocar o modo
-st.radio(
-    "Escolha o nível:",
-    opcoes_modo,
-    key="modo_selector",  # Chave interna para o widget
-    on_change=gerar_conta,
-    horizontal=True
-)
+# --- INTERFACE ---
+st.title("🧮 Desafio de Cálculo Mental")
+
+col_config1, col_config2 = st.columns(2)
+
+with col_config1:
+    st.selectbox("Operação:", opcoes_operacao, key="op_selector", on_change=gerar_conta)
+
+with col_config2:
+    st.selectbox("Dificuldade:", opcoes_modo, key="modo_selector", on_change=gerar_conta)
 
 st.divider()
 
-# Pergunta
-st.header(f"Quanto é {st.session_state.n1} × {st.session_state.n2}?")
+# Mapeamento de símbolos
+simbolos = {"Multiplicação": "×", "Adição": "+", "Subtração": "-"}
+simbolo = simbolos[st.session_state.operacao_atual]
 
-# Campo de Resposta (A key muda via contador para limpar o campo)
+# Pergunta
+st.header(f"Quanto é {st.session_state.n1} {simbolo} {st.session_state.n2}?")
+
+# Campo de Resposta
 resposta = st.text_input(
     "Sua resposta:", 
     key=f"input_{st.session_state.contador}",
-    placeholder="Digite o resultado..."
+    placeholder="Digite o resultado e aperte Enter"
 )
 
+# Lógica de Verificação
+def verificar():
+    if resposta:
+        try:
+            n1, n2 = st.session_state.n1, st.session_state.n2
+            op = st.session_state.operacao_atual
+            
+            if op == "Multiplicação": real = n1 * n2
+            elif op == "Adição": real = n1 + n2
+            else: real = n1 - n2
+            
+            if int(resposta) == real:
+                st.session_state.feedback = f"✅ Correto! {n1} {simbolo} {n2} = {real}"
+            else:
+                st.session_state.feedback = f"❌ Errado! O resultado era {real}"
+        except ValueError:
+            st.session_state.feedback = "⚠️ Digite apenas números inteiros!"
+    else:
+        st.session_state.feedback = "🤔 Digite algo primeiro."
+
 # Botões
-col1, col2 = st.columns(2)
+col_b1, col_b2 = st.columns(2)
 
-with col1:
+with col_b1:
     if st.button("Verificar ✅", use_container_width=True, type="primary"):
-        if resposta:
-            try:
-                real = st.session_state.n1 * st.session_state.n2
-                if int(resposta) == real:
-                    st.session_state.feedback = f"✅ Correto! {st.session_state.n1} × {st.session_state.n2} = {real}"
-                else:
-                    st.session_state.feedback = f"❌ Errado! Era {real}"
-            except ValueError:
-                st.session_state.feedback = "⚠️ Digite apenas números!"
-        else:
-            st.session_state.feedback = "🤔 Digite algo primeiro."
+        verificar()
 
-with col2:
+with col_b2:
     if st.button("Próxima Conta ➡️", use_container_width=True):
         gerar_conta()
         st.rerun()
