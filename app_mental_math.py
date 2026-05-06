@@ -27,10 +27,17 @@ def gerar_conta():
     r_min, r_max = ranges.get(modo, (10, 99))
 
     if op == "Divisão":
-        # Para divisão ser exata e mentalmente viável:
-        # Criamos uma conta de multiplicação "inversa"
-        st.session_state.n2 = random.randint(r_min, r_max if modo != "Expert (4 dígitos)" else 100) # Divisor menor para ser possível
-        resultado_inteiro = random.randint(2, 12 if modo == "Fácil (1 dígito)" else 100)
+        # Lógica de divisão segura para evitar o erro de range vazio
+        if modo == "Expert (4 dígitos)":
+            # Para 4 dígitos, sorteamos um divisor de 2 ou 3 dígitos para ser viável
+            st.session_state.n2 = random.randint(10, 500)
+        elif modo == "Difícil (3 dígitos)":
+            st.session_state.n2 = random.randint(10, 100)
+        else:
+            st.session_state.n2 = random.randint(r_min, r_max)
+            
+        # O resultado (quociente) será sempre simples para permitir cálculo mental
+        resultado_inteiro = random.randint(2, 20 if "dígito" in modo else 50)
         st.session_state.n1 = st.session_state.n2 * resultado_inteiro
     else:
         st.session_state.n1 = random.randint(r_min, r_max)
