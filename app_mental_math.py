@@ -2,10 +2,9 @@ import streamlit as st
 import random
 
 # 1. Configuração da página
-st.set_page_config(page_title="Treino Mental", page_icon="🧮")
+st.set_page_config(page_title="Treino Mental Pro", page_icon="🧮")
 
 # --- INICIALIZAÇÃO DO ESTADO ---
-# Isso garante que as variáveis existam antes da interface carregar
 if 'n1' not in st.session_state:
     st.session_state.n1 = random.randint(10, 99)
     st.session_state.n2 = random.randint(10, 99)
@@ -15,19 +14,27 @@ if 'n1' not in st.session_state:
 
 # --- FUNÇÕES ---
 def gerar_conta():
-    # Busca os valores dos widgets ou usa o padrão caso ainda não existam
     modo = st.session_state.get('modo_selector', "Médio (2 dígitos)")
     op = st.session_state.get('op_selector', "Multiplicação")
     
-    if "1 dígito" in modo:
-        r_min, r_max = 2, 9
-    elif "2 dígitos" in modo:
-        r_min, r_max = 10, 99
-    else:
-        r_min, r_max = 100, 999
+    # Define os intervalos baseado no nível
+    ranges = {
+        "Fácil (1 dígito)": (2, 9),
+        "Médio (2 dígitos)": (10, 99),
+        "Difícil (3 dígitos)": (100, 999),
+        "Expert (4 dígitos)": (1000, 9999)
+    }
+    r_min, r_max = ranges.get(modo, (10, 99))
 
-    st.session_state.n1 = random.randint(r_min, r_max)
-    st.session_state.n2 = random.randint(r_min, r_max)
+    if op == "Divisão":
+        # Para divisão ser exata e mentalmente viável:
+        # Criamos uma conta de multiplicação "inversa"
+        st.session_state.n2 = random.randint(r_min, r_max if modo != "Expert (4 dígitos)" else 100) # Divisor menor para ser possível
+        resultado_inteiro = random.randint(2, 12 if modo == "Fácil (1 dígito)" else 100)
+        st.session_state.n1 = st.session_state.n2 * resultado_inteiro
+    else:
+        st.session_state.n1 = random.randint(r_min, r_max)
+        st.session_state.n2 = random.randint(r_min, r_max)
     
     # Evitar números negativos na subtração
     if op == "Subtração" and st.session_state.n1 < st.session_state.n2:
@@ -45,7 +52,7 @@ col_config1, col_config2 = st.columns(2)
 with col_config1:
     st.selectbox(
         "Operação:", 
-        ["Multiplicação", "Adição", "Subtração"], 
+        ["Multiplicação", "Adição", "Subtração", "Divisão"], 
         key="op_selector", 
         on_change=gerar_conta
     )
@@ -53,7 +60,7 @@ with col_config1:
 with col_config2:
     st.selectbox(
         "Dificuldade:", 
-        ["Fácil (1 dígito)", "Médio (2 dígitos)", "Difícil (3 dígitos)"], 
+        ["Fácil (1 dígito)", "Médio (2 dígitos)", "Difícil (3 dígitos)", "Expert (4 dígitos)"], 
         index=1,
         key="modo_selector", 
         on_change=gerar_conta
@@ -62,14 +69,13 @@ with col_config2:
 st.divider()
 
 # Mapeamento de símbolos
-simbolos = {"Multiplicação": "×", "Adição": "+", "Subtração": "-"}
+simbolos = {"Multiplicação": "×", "Adição": "+", "Subtração": "-", "Divisão": "÷"}
 simbolo = simbolos.get(st.session_state.operacao_atual, "×")
 
 # Pergunta
 st.header(f"Quanto é {st.session_state.n1} {simbolo} {st.session_state.n2}?")
 
 # Campo de Resposta
-# O uso da key dinâmica limpa o campo automaticamente na próxima conta
 resposta = st.text_input(
     "Sua resposta:", 
     key=f"input_{st.session_state.contador}",
@@ -89,7 +95,8 @@ with col_b1:
                 
                 if op == "Multiplicação": real = n1 * n2
                 elif op == "Adição": real = n1 + n2
-                else: real = n1 - n2
+                elif op == "Subtração": real = n1 - n2
+                else: real = n1 // n2
                 
                 if res_user == real:
                     st.session_state.feedback = f"✅ Correto! {n1} {simbolo} {n2} = {real}"
@@ -105,7 +112,7 @@ with col_b2:
         gerar_conta()
         st.rerun()
 
-# Exibição do Feedback
+# Feedback
 if st.session_state.feedback:
     if "✅" in st.session_state.feedback:
         st.success(st.session_state.feedback)
