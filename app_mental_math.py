@@ -2,48 +2,50 @@ import streamlit as st
 import random
 
 # 1. Configuração da página
-st.set_page_config(page_title="Treino Mental Pro", page_icon="🧮")
+st.set_page_config(page_title="Treino Mental Custom", page_icon="🧮")
 
 # --- INICIALIZAÇÃO DO ESTADO ---
 if 'n1' not in st.session_state:
-    st.session_state.n1 = random.randint(10, 99)
-    st.session_state.n2 = random.randint(10, 99)
-    st.session_state.feedback = ""
-    st.session_state.contador = 0
-    st.session_state.operacao_atual = "Multiplicação"
+    st.session_state.update({
+        'n1': random.randint(10, 99),
+        'n2': random.randint(2, 9),
+        'feedback': "",
+        'contador': 0,
+        'operacao_atual': "Multiplicação"
+    })
 
 # --- FUNÇÕES ---
-def gerar_conta():
-    modo = st.session_state.get('modo_selector', "Médio (2 dígitos)")
-    op = st.session_state.get('op_selector', "Multiplicação")
-    
-    # Define os intervalos baseado no nível
-    ranges = {
-        "Fácil (1 dígito)": (2, 9),
-        "Médio (2 dígitos)": (10, 99),
-        "Difícil (3 dígitos)": (100, 999),
-        "Expert (4 dígitos)": (1000, 9999)
+def obter_range(opcao_texto):
+    mapa = {
+        "1 dígito": (2, 9),
+        "2 dígitos": (10, 99),
+        "3 dígitos": (100, 999),
+        "4 dígitos": (1000, 9999)
     }
-    r_min, r_max = ranges.get(modo, (10, 99))
+    return mapa.get(opcao_texto, (2, 9))
+
+def gerar_conta():
+    op = st.session_state.get('op_selector', "Multiplicação")
+    d1 = st.session_state.get('d1_selector', "2 dígitos")
+    d2 = st.session_state.get('d2_selector', "1 dígito")
+    
+    r1_min, r1_max = obter_range(d1)
+    r2_min, r2_max = obter_range(d2)
 
     if op == "Divisão":
-        # Lógica de divisão segura para evitar o erro de range vazio
-        if modo == "Expert (4 dígitos)":
-            # Para 4 dígitos, sorteamos um divisor de 2 ou 3 dígitos para ser viável
-            st.session_state.n2 = random.randint(10, 500)
-        elif modo == "Difícil (3 dígitos)":
-            st.session_state.n2 = random.randint(10, 100)
-        else:
-            st.session_state.n2 = random.randint(r_min, r_max)
-            
-        # O resultado (quociente) será sempre simples para permitir cálculo mental
-        resultado_inteiro = random.randint(2, 20 if "dígito" in modo else 50)
-        st.session_state.n1 = st.session_state.n2 * resultado_inteiro
+        # Para divisão exata: n2 é o divisor, resultado é o quociente
+        # n1 será o produto deles (dividendo)
+        st.session_state.n2 = random.randint(r2_min, r2_max)
+        # Limitamos o quociente para não gerar números gigantescos
+        # Se n1 for 4 dígitos, o quociente é ajustado proporcionalmente
+        max_quociente = 100 if d1 != "4 dígitos" else 1000
+        quociente = random.randint(2, max_quociente)
+        st.session_state.n1 = st.session_state.n2 * quociente
     else:
-        st.session_state.n1 = random.randint(r_min, r_max)
-        st.session_state.n2 = random.randint(r_min, r_max)
+        st.session_state.n1 = random.randint(r1_min, r1_max)
+        st.session_state.n2 = random.randint(r2_min, r2_max)
     
-    # Evitar números negativos na subtração
+    # Ajuste para subtração (evitar negativos)
     if op == "Subtração" and st.session_state.n1 < st.session_state.n2:
         st.session_state.n1, st.session_state.n2 = st.session_state.n2, st.session_state.n1
         
@@ -52,26 +54,24 @@ def gerar_conta():
     st.session_state.contador += 1
 
 # --- INTERFACE ---
-st.title("🧮 Desafio de Cálculo Mental")
+st.title("🧮 Treino Mental Personalizado")
 
-col_config1, col_config2 = st.columns(2)
+# Configurações em colunas
+col_op, col_n1, col_n2 = st.columns(3)
 
-with col_config1:
-    st.selectbox(
-        "Operação:", 
-        ["Multiplicação", "Adição", "Subtração", "Divisão"], 
-        key="op_selector", 
-        on_change=gerar_conta
-    )
+opcoes_digitos = ["1 dígito", "2 dígitos", "3 dígitos", "4 dígitos"]
 
-with col_config2:
-    st.selectbox(
-        "Dificuldade:", 
-        ["Fácil (1 dígito)", "Médio (2 dígitos)", "Difícil (3 dígitos)", "Expert (4 dígitos)"], 
-        index=1,
-        key="modo_selector", 
-        on_change=gerar_conta
-    )
+with col_op:
+    st.selectbox("Operação:", ["Multiplicação", "Adição", "Subtração", "Divisão"], 
+                 key="op_selector", on_change=gerar_conta)
+
+with col_n1:
+    st.selectbox("Dígitos do nº 1:", opcoes_digitos, index=1, 
+                 key="d1_selector", on_change=gerar_conta)
+
+with col_n2:
+    st.selectbox("Dígitos do nº 2:", opcoes_digitos, index=0, 
+                 key="d2_selector", on_change=gerar_conta)
 
 st.divider()
 
@@ -80,7 +80,8 @@ simbolos = {"Multiplicação": "×", "Adição": "+", "Subtração": "-", "Divis
 simbolo = simbolos.get(st.session_state.operacao_atual, "×")
 
 # Pergunta
-st.header(f"Quanto é {st.session_state.n1} {simbolo} {st.session_state.n2}?")
+st.subheader("Resolva a conta:")
+st.header(f"{st.session_state.n1} {simbolo} {st.session_state.n2} = ?")
 
 # Campo de Resposta
 resposta = st.text_input(
@@ -90,9 +91,8 @@ resposta = st.text_input(
 )
 
 # Botões
-col_b1, col_b2 = st.columns(2)
-
-with col_b1:
+c1, c2 = st.columns(2)
+with c1:
     if st.button("Verificar ✅", use_container_width=True, type="primary"):
         if resposta:
             try:
@@ -114,7 +114,7 @@ with col_b1:
         else:
             st.session_state.feedback = "🤔 Digite algo primeiro."
 
-with col_b2:
+with c2:
     if st.button("Próxima Conta ➡️", use_container_width=True):
         gerar_conta()
         st.rerun()
