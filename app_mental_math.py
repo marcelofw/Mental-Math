@@ -33,28 +33,34 @@ def gerar_conta():
     r2_min, r2_max = obter_range(d2_txt)
 
     if op == "Divisão":
-        # LÓGICA CORRIGIDA PARA DIVISÃO:
-        # 1. Sorteamos o n1 dentro do range de dígitos escolhido
-        n1_temp = random.randint(r1_min, r1_max)
-        # 2. Sorteamos o n2 dentro do seu range
+        # 1. Sorteamos o n2 (Divisor) primeiro
         n2_temp = random.randint(r2_min, r2_max)
         
-        # 3. Para garantir divisão exata e n1 com os dígitos corretos:
-        # Ajustamos n1 para o múltiplo de n2 mais próximo de n1_temp
-        n1_ajustado = (n1_temp // n2_temp) * n2_temp
+        # 2. Sorteamos um n1 (Dividendo) temporário
+        n1_temp = random.randint(r1_min, r1_max)
         
-        # 4. Verificação de segurança: se o ajuste jogou o n1 para baixo do range (ex: era 100 e virou 98)
+        # 3. Trava de Sanidade: Se o divisor for maior que o dividendo (ex: 1 dígito / 4 dígitos)
+        # nós forçamos o divisor a ser menor que o dividendo para manter os dígitos escolhidos.
+        if n2_temp > r1_max:
+             # Se o usuário pediu divisor de 4 dígitos mas dividendo de 1, 
+             # reduzimos o divisor para o máximo do dividendo
+             n2_temp = random.randint(2, r1_max)
+        
+        # 4. Ajuste para divisão exata
+        # Encontramos o quociente inteiro
+        quociente = n1_temp // n2_temp
+        if quociente == 0: quociente = 1
+        
+        n1_ajustado = quociente * n2_temp
+        
+        # 5. Garante que n1_ajustado ainda está no range de dígitos do d1
         if n1_ajustado < r1_min:
-            n1_ajustado += n2_temp
-            
-        # 5. Se após o ajuste o n1 passar do range (ex: era 999 e virou 1002), tentamos subtrair
-        if n1_ajustado > r1_max:
-            n1_ajustado -= n2_temp
-            
-        # Caso extremo (ex: n2 > n1), garantimos valores mínimos
-        if n1_ajustado == 0 or n1_ajustado < n2_temp:
-             n1_ajustado = n2_temp * random.randint(2, 9)
+            n1_ajustado = (r1_min // n2_temp + 1) * n2_temp
         
+        # Se mesmo assim passar do range (ex: 999 + algo), pegamos o múltiplo anterior
+        if n1_ajustado > r1_max:
+            n1_ajustado = (r1_max // n2_temp) * n2_temp
+            
         st.session_state.n1 = n1_ajustado
         st.session_state.n2 = n2_temp
     else:
@@ -73,7 +79,6 @@ def gerar_conta():
 st.title("🧮 Treino Mental Personalizado")
 
 col_op, col_n1, col_n2 = st.columns(3)
-
 opcoes_digitos = ["1 dígito", "2 dígitos", "3 dígitos", "4 dígitos"]
 
 with col_op:
@@ -96,11 +101,7 @@ simbolo = simbolos.get(st.session_state.operacao_atual, "×")
 st.subheader("Resolva a conta:")
 st.header(f"{st.session_state.n1} {simbolo} {st.session_state.n2} = ?")
 
-resposta = st.text_input(
-    "Sua resposta:", 
-    key=f"input_{st.session_state.contador}",
-    placeholder="Digite o resultado..."
-)
+resposta = st.text_input("Sua resposta:", key=f"input_{st.session_state.contador}")
 
 c1, c2 = st.columns(2)
 with c1:
@@ -111,19 +112,16 @@ with c1:
                 n1, n2 = st.session_state.n1, st.session_state.n2
                 op = st.session_state.operacao_atual
                 
-                if op == "Multiplicação": real = n1 * n2
-                elif op == "Adição": real = n1 + n2
-                elif op == "Subtração": real = n1 - n2
-                else: real = n1 // n2
+                real = n1 * n2 if op == "Multiplicação" else n1 + n2 if op == "Adição" else n1 - n2 if op == "Subtração" else n1 // n2
                 
                 if res_user == real:
                     st.session_state.feedback = f"✅ Correto! {n1} {simbolo} {n2} = {real}"
                 else:
-                    st.session_state.feedback = f"❌ Errado! O resultado era {real}"
+                    st.session_state.feedback = f"❌ Errado! Era {real}"
             except ValueError:
-                st.session_state.feedback = "⚠️ Digite apenas números inteiros!"
+                st.session_state.feedback = "⚠️ Digite apenas números!"
         else:
-            st.session_state.feedback = "🤔 Digite algo primeiro."
+            st.session_state.feedback = "🤔 Digite algo."
 
 with c2:
     if st.button("Próxima Conta ➡️", use_container_width=True):
@@ -131,7 +129,5 @@ with c2:
         st.rerun()
 
 if st.session_state.feedback:
-    if "✅" in st.session_state.feedback:
-        st.success(st.session_state.feedback)
-    else:
-        st.error(st.session_state.feedback)
+    if "✅" in st.session_state.feedback: st.success(st.session_state.feedback)
+    else: st.error(st.session_state.feedback)
